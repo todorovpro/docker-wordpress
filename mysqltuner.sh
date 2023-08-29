@@ -1,0 +1,1 @@
+docker compose exec mariadb perl /opt/mysqltuner/mysqltuner.pl --user root --passenv MARIADB_ROOT_PASSWORD

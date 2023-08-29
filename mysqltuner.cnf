@@ -1,0 +1,13 @@
+[mariadb]
+performance_schema=ON
+slow_query_log=ON
+long_query_time=2
+join_buffer_size=32M
+query_cache_limit=256M
+query_cache_size=256M
+query_cache_type=1
+tmp_table_size=512M
+max_heap_table_size=512M
+innodb_buffer_pool_size=1000M
+innodb_log_file_size=200M
+thread_handling=pool-of-threads

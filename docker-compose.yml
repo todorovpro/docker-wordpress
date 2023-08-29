@@ -1,0 +1,76 @@
+version: "3.1"
+
+services:
+  wordpress:
+    # build wordpress from official image and add php redis extention
+    build:
+      context: ./build-wp
+      args:
+        WORDPRESS_VERSION: ${WORDPRESS_VERSION}
+    restart: always
+    environment:
+      WORDPRESS_DB_HOST: mariadb
+      WORDPRESS_DB_USER: ${DB_USER}
+      WORDPRESS_DB_PASSWORD: ${DB_PASS}
+      WORDPRESS_DB_NAME: ${DB_NAME}
+      # this is for disabling automatic updates because sometimes stuff breaks, manual updates are allowed
+      WORDPRESS_CONFIG_EXTRA: "define( 'AUTOMATIC_UPDATER_DISABLED', true );"
+    volumes:
+      - ./wordpress:/var/www/html
+    networks:
+      - default
+      - traefik-proxy
+    labels:
+      - 'traefik.enable=true'
+      - 'traefik.http.routers.${COMPOSE_PROJECT_NAME}.rule=Host(`${TRAEFIK_DOMAIN}`) || Host(`www.${TRAEFIK_DOMAIN}`)'
+      - 'traefik.http.routers.${COMPOSE_PROJECT_NAME}.entrypoints=https'
+      - 'traefik.http.routers.${COMPOSE_PROJECT_NAME}.tls=true'
+      - 'traefik.http.routers.${COMPOSE_PROJECT_NAME}.tls.certresolver=letsencrypt'
+
+  mariadb:
+    # image: mariadb:${MARIADB_VERSION}
+    # build mariadb from official image and add mysqltuner
+    build:
+      context: ./build-mariadb
+      args:
+        MARIADB_VERSION: ${MARIADB_VERSION}
+    # if you wont use mysqltuner comment above build section and uncomment image: mariadb....
+    restart: always
+    environment:
+      MARIADB_ROOT_PASSWORD: ${DB_ROOT_PASS}
+      MARIADB_DATABASE: ${DB_NAME}
+      MARIADB_USER: ${DB_USER}
+      MARIADB_PASSWORD: ${DB_PASS}
+    volumes:
+      - ./mariadb:/var/lib/mysql
+      - ./mysqltuner.cnf:/etc/mysql/conf.d/mysqltuner.cnf
+
+  redis:
+    image: redis
+    restart: always
+    # wp redis plugin expects redis on localhost
+    network_mode: service:wordpress
+
+  # phpmyadmin:
+  #   image: phpmyadmin
+  #   restart: always
+  #   environment:
+  #     PMA_HOST: mariadb
+  #     # if you want to login without password, insecure!
+  #     # PMA_USER: ${DB_USER}
+  #     # PMA_PASSWORD: ${DB_PASS}
+  #     UPLOAD_LIMIT: 1G
+  #   networks:
+  #     - default
+  #     - traefik-proxy
+  #   labels:
+  #     - 'traefik.enable=true'
+  #     - 'traefik.http.routers.${COMPOSE_PROJECT_NAME}-pma.rule=Host(`${TRAEFIK_DOMAIN_PMA}`)'
+  #     - 'traefik.http.routers.${COMPOSE_PROJECT_NAME}-pma.entrypoints=https'
+  #     - 'traefik.http.routers.${COMPOSE_PROJECT_NAME}-pma.tls=true'
+  #     - 'traefik.http.routers.${COMPOSE_PROJECT_NAME}-pma.tls.certresolver=letsencrypt'
+
+networks:
+  traefik-proxy:
+    name: traefik-proxy
+    external: true
